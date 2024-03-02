@@ -1,26 +1,19 @@
-from adrv.main import Disk, Size, Converter
 import os
 
-convert = Converter().convert
+from adrv.disk import Disk, Size, convert
+from adrv.bridge import *
 
-personnal = Disk('./disks/personnal.adrv', convert(50, "kB", "B")) # Creates a 12MB virtual disk
+disk = Disk('example', '.', convert(4, 'GB', 'B')) # Creates a 4GB virtual disk
+bridge = PhysicalBridge(disk) # Setup the bridge to the wanted disk
 
-with open('data/drawing.png', 'rb') as _file: # Open an existing file...
-	personnal.write(_file.read(), '/images', 'img1.png') # ...and copy it into the VDisk
+bridge.copy('README.md', '/repo', 'README') # Copy a real file to the virtual disk.
+bridge.copy('LICENSE', '/repo') # The third parameter specifies the name of the virtual file, and it's optional
+amount_written = bridge.copy('./adrv/disk.py', '/scripts', 'main.py') # And you can collect the amount of bytes written on the disk.
 
-with open('data/note.txt', 'r') as _file: # It works for text as well
-	amount_written = personnal.write(_file.read(), '/text', 'note.txt') # And you can collect the amount of bytes written on the disk.
-	print(f"{Size(amount_written).literal()} have been written.")
+print(f"{Size(amount_written).literal()} have been written.")
 
-with open('data/drawing2.png', 'rb') as _file:
-	personnal.write(_file.read(), '/images', 'img2.png')
-
-percentageUsed = round(personnal.size.raw / personnal.max_size.raw * 10000) / 100
-print(f"{'None' if percentageUsed == 0 else f'{percentageUsed}%'} of the storage used ({personnal.size.literal()} out of {personnal.max_size.literal()})")
-
-drawing1 = personnal.open_file('/images/img1.png')
-drawing2 = personnal.open_file('/images/img2.png')
-note = personnal.open_file('/text/note.txt')
+percentageUsed = round(disk.size.raw / disk.max_size.raw * 10000) / 100
+print(f"{'None' if percentageUsed == 0 else f'{percentageUsed}%'} of the storage used ({disk.size.literal()} out of {disk.max_size.literal()})")
 
 
 try:
@@ -29,17 +22,11 @@ except:
 	pass
 
 
-with open('dist/drawing.png', 'wb') as file:
-	file.write(drawing1.content)
-	personnal.remove('/images/img1.png')
+bridge.extract('/repo/LICENSE', 'dist/LICENSE')
+content = bridge.extract('/repo/README', 'dist/README.md').content # The extract() method also returns a FileResponse
 
-with open('dist/drawing2.png', 'wb') as file:
-	file.write(drawing2.content)
-	personnal.remove('/images/img2.png')
+disk.remove('/repo/LICENSE') # You can remove files easily
+amount_deleted = disk.remove('/repo/README') # And get the amount of bytes deleted as well
 
-with open('dist/note.txt', 'wb') as file:
-	file.write(note.content)
-	personnal.remove('/text/note.txt')
-
-percentageUsed = round(personnal.size.raw / personnal.max_size.raw * 10000) / 100
-print(f"{'None' if percentageUsed == 0 else f'{percentageUsed}%'} of the storage used ({personnal.size.literal()} out of {personnal.max_size.literal()})")
+percentageUsed = round(disk.size.raw / disk.max_size.raw * 10000) / 100
+print(f"{'None' if percentageUsed == 0 else f'{percentageUsed}%'} of the storage used ({disk.size.literal()} out of {disk.max_size.literal()})")
