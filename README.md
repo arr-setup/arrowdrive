@@ -37,9 +37,9 @@ bridge.copy('./images/drawing.png', '/drawings')
 ```
 
 **PhysicalBridge.copy() -- Parameters:**
-> `filePath: str` - The file absolute or relative path on your computer
-> `virtualPath: str` - The destination of your file in the virtual disk
-> `newName: str` *(optional)* - The new name of the file, default is the last element of the `filePath` value.
+> `filePath: str` - The file absolute or relative path on your computer<br>
+> `virtualPath: str` - The destination of your file in the virtual disk<br>
+> `newName: str` *(optional)* - The new name of the file, default is the last element of the `filePath` value.<br>
 
 ### With the VirtualBridge
 The VirtualBridge offers a bridge between two virtual disks.
@@ -56,6 +56,6 @@ myDisk.write('Hello World', '/text', 'helloworld.txt')
 ```
 
 **Disk.write() -- Parameters**
-> `content: str | bytes` - The file content
-> `vPath: str` - The file destination on your virtual disk
-> `newName: str` - The name of your file in the virtual disk
+> `content: str | bytes` - The file content<br>
+> `vPath: str` - The file destination on your virtual disk<br>
+> `newName: str` - The name of your file in the virtual disk<br>
