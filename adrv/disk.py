@@ -7,8 +7,9 @@ from ._cls import *
 from .utils import *
 
 class Disk:
-    def __init__(self, path: str, max_size: int):
-        self.path = path
+    def __init__(self, name: str = 'vDisk', path: str = '.', max_size: int = 1000 ** 2):
+        self.name = name
+        self.path = os.path.normpath(f"{path}/{name}.adrv")
         self.max_size = Size(max_size)
         self.size = Size(0)
 
@@ -48,7 +49,7 @@ class Disk:
                     
     def write(self, content: str | bytes, vPath: str, name: str) -> int:
         if self.size.raw + len(content) > self.max_size.raw:
-            raise FullDiskError(f'Could not write anything at {vPath} as its content would overload the disk. Actual size: {self.max_size.literal()}')
+            raise FullDiskError(f'Could not write anything at {vPath} as its content would overload the disk. Available space: {Size(self.max_size.raw - self.size.raw).literal()} / File size: {len(content)}')
         else:
             with zipfile.ZipFile(self.path, 'a') as archive:
                 os.makedirs(f"./temp/{vPath}")
