@@ -7,23 +7,26 @@ from ._cls import *
 from .utils import *
 
 class Disk:
-    def __init__(self, name: str = 'vDisk', path: str = '.', max_size: int = 1000 ** 2):
+    def __init__(self, name: str = 'vDisk', path: str = './', max_size: int = 1000 ** 2):
         self.name = name
-        self.path = os.path.normpath(f"{path}/{name}.adrv")
+        self.path = f"{path}/{name}.adrv".replace('//', '/')
         self.max_size = Size(max_size)
         self.size = Size(0)
 
         try:
-            with open(path, 'rb') as file:
+            with open(self.path, 'rb') as file:
                 for block in file:
                     if block[0] != b'\0':
                         raise ValueError("File is not bytes")
         except:
-            _dirs =  os.path.dirname(path)
+            _dirs = self.path.split('/')
+            _dirs.pop()
+            _dirs = '/'.join(_dirs)
             if not os.path.exists(_dirs):
+                print(self.path)
                 os.makedirs(_dirs)
                 
-            with open(path, 'wb') as file:
+            with open(self.path, 'wb') as file:
                 pass
 
     def open_file(self, vPath: str) -> FileResponse:

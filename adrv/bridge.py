@@ -4,13 +4,13 @@ from .disk import Disk
 from ._cls import *
 
 class PhysicalBridge:
-    def __init__(self, disk: Disk = Disk()):
+    def __init__(self, disk: Disk):
         self.disk = disk
 
-    def save_from_vdisk(self, vPath: str, newPath: str):
+    def extract(self, vPath: str, newPath: str):
         try:
             directories: list = newPath.split('/')
-            directories = directories.pop()
+            directories.pop()
             os.makedirs('/'.join(directories))
         except FileExistsError:
             pass
@@ -20,8 +20,11 @@ class PhysicalBridge:
 
         return self.disk.open_file(vPath)
 
-    def copy(self, vPath: str, filePath: str, name: str):
-        with open(vPath, 'rb') as _file:
-            amount_written = self.disk.write(_file.read(), filePath, name)
+    def copy(self, filePath: str, vPath: str, name: str = None):
+        if name is None:
+            name = filePath.split('/')[-1]
+
+        with open(filePath, 'rb') as _file:
+            amount_written = self.disk.write(_file.read(), vPath, name)
 
         return amount_written
