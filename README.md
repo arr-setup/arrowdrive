@@ -52,7 +52,7 @@ myDisk = Disk('./vDisks/myDisk.adrv', 4 * 1000 ** 3) # Create a 4GB disk.
 yourDisk = Disk('./vDisks/yourDisk.adrv', 4 * 1000 ** 3) # Create another 4GB disk.
 vBridge = VirtualBridge(myDisk, yourDisk)
 
-vBridge.cross('./images/drawing.png', '/drawings', rtl = False) # Copy drawing.png on the first disk to the /drawings directory of the second disk
+vBridge.cross('/images/drawing.png', '/drawings', rtl = False) # Copy drawing.png on the first disk to the /drawings directory of the second disk
 ```
 
 **VirtualBridge() - Parameters:**
