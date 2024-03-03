@@ -28,3 +28,17 @@ class PhysicalBridge:
             amount_written = self.disk.write(_file.read(), vPath, name)
 
         return amount_written
+
+class VirtualBridge:
+    def __init__(self, firstDisk: Disk, secondDisk: Disk):
+        self.left = firstDisk
+        self.right = secondDisk
+    
+    def cross(self, targetPath: str, finalPath: str = '/shore', rtl: bool = False):
+        if rtl:
+            sender, receiver = self.right, self.self
+        else:
+            sender, receiver = self.left, self.right
+
+        _pkg = sender.open_file(targetPath)
+        receiver.write(_pkg.content, finalPath, _pkg.name)
