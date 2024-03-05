@@ -7,20 +7,19 @@ class PhysicalBridge:
     def __init__(self, disk: Disk):
         self.disk = disk
 
-    def extract(self, vPath: str, newPath: str):
+    def bring(self, vPath: str, newPath: str):
         try:
-            directories: list = newPath.split('/')
-            directories.pop()
-            os.makedirs('/'.join(directories))
-        except FileExistsError:
-            pass
+            directories: list = tuple(newPath.split('/')[ : -2 ])
+            if len(directories) >= 2:
+                os.makedirs(os.path.join(directories[0], *directories[ 1 : ]))
+        except FileExistsError: pass
         
         with open(newPath, 'wb') as _file:
-            _file.write(self.disk.open_file(vPath).content)
+            _file.write(self.disk.read(vPath).content)
 
         return self.disk.open_file(vPath)
 
-    def copy(self, filePath: str, vPath: str, name: str = None):
+    def send(self, filePath: str, vPath: str, name: str = None):
         if name is None:
             name = filePath.split('/')[-1]
 
