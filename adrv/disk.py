@@ -1,7 +1,5 @@
 import io
-import json
 import os
-import tempfile
 import time
 import uuid
 import zipfile
@@ -32,53 +30,27 @@ class Disk:
             with open(self.path, 'wb') as file:
                 self.format_disk()
 
-    def __read(self, _path: str) -> str:
-         with open(self.path, 'rb') as file:
-            archive = io.BytesIO(file.read())
+    def __read(self, _path: str, encoding: str | None = None) -> str:
+         with open(self.path, 'rb') as _file:
+            archive = io.BytesIO(_file.read())
 
             with zipfile.ZipFile(archive, 'r') as zip_buffer:
-                with tempfile.TemporaryDirectory() as tempDir:
-                    zip_buffer.extractall(tempDir)
-                    _path = os.path.normpath(_path)
-                    tempPath = os.path.normpath(os.path.join(tempDir, _path))
-
-                    if os.path.exists(tempPath):
-                        if os.path.isdir(tempPath):
-                            raise FileIsDirectoryError(f"{_path} is a directory.")
-                        else:
-                            with open(tempPath, 'rb') as extracted_file:
-                                content = extracted_file.read().decode('UTF-8')
-                                
-                            return content
+                try:
+                    content = zip_buffer.read(_path)
+                    if encoding is None:
+                        return content
                     else:
-                        raise FileNotFoundError(f"{_path} was not found.")
+                        return content.decode(encoding)
+
+                except:
+                    raise FileNotFoundError(f"{_path} was not found.")
                     
     def __write(self, content: str | bytes, _path: str) -> int:
-        # name = _path.split('/')[-1]
-        # _dirs = '/'.join(_path.split('/')[0 : -2])
-        # _path = os.path.normpath(_dirs).replace('\\', '/')
-
         if self.size.raw + len(content) > self.max_size.raw:
             raise FullDiskError(f'Could not write anything at {_path} as its content would overload the disk. Available space: {Size(self.max_size.raw - self.size.raw).literal()} / File size: {len(content)}')
         else:
-            with zipfile.ZipFile(self.path, 'a') as zip_buffer, tempfile.TemporaryDirectory(dir = '.') as tempDir:
+            with zipfile.ZipFile(self.path, 'a') as zip_buffer:
                 zip_buffer.writestr(_path, content)
-                filePath: str
-                
-                """
-                if _path[0] in ['/', '\\']:
-                    os.makedirs(os.path.join(tempDir, _path[1:]))
-                else:
-                    print(_path)
-                    os.makedirs(os.path.join(tempDir, _path))
-
-                # filePath = os.path.join(_path, name)
-
-                with open(os.path.join(tempDir, filePath), 'w' if type(content) == str else 'wb') as _file:
-                    _file.write(content)
-            
-                zip_buffer.write(os.path.join(tempDir, filePath), filePath)
-                """
             
             self.size.raw += len(content)
             return len(content)
@@ -102,47 +74,65 @@ class Disk:
 
         return len(_file)
 
-    def __edit_sys(self, _name: str, _data: str = '', _mode: str = 'r') -> str | None:
+    def __sys_data(self, _name: str, _data: str = '', _mode: str = 'r') -> str | None:
         _path = os.path.join('/.sys/', _name)
         if _mode == 'r':
-            return self.__read(_path).split('\n')
+            return self.__read(_path, 'UTF-8').split('\n')
         elif _mode == 'w':
             self.__write(_data, _path)
         elif _mode == 'a':
-            print(_data)
             data = self.__read(_path)
             _data = '\n'.join((str(data), str(_data)))
             self.__delete(_path)
             self.__write(_data, _path)
+
     
     """
-    Main Disk functions
+    Main Disk methods
     """
 
     def format_disk(self):
+        """
+        Empty a Disk, repair a damaged Disk or format any file to make it usable by ADRV.
+        No params, returns None
+        """
+
         # Reset the disk
         blank = io.BytesIO()
         with open(self.path, 'wb') as buffer:
             buffer.write(blank.getvalue())
         
         # Create system files
-        self.__edit_sys('Disk/$Registry', '', 'w')
-        self.__edit_sys('Disk/$Properties', f'{self.name}\n{self.max_size.raw}\n{round(time.time())}\n{VERSION}\n{SUPPORTS}', 'w')
+        self.__sys_data('Disk/$Registry', _mode = 'w')
+        self.__sys_data('Disk/$Properties', f'{self.name}\n{self.max_size.raw}\n{round(time.time())}\n{VERSION}\n{SUPPORTS}', 'w')
+
+        # Tests :
+        # self.__sys_data()
 
     def write(self, vPath: str, content: str | bytes = '', mode: str = 'a') -> int:
+        """
+        Write a file to Disk.\n
+
+        - Params:\n
+            vPath: file destination path\n
+            Mode 'a': append or edit a file\n
+                 'w': create or replace a file\n
+        - Returns: weigth of added content, in bytes
+        """
+
         if mode == 'w':
             _file = { 'path': vPath, 'address': str(uuid.uuid4()), 'timestamp': round(time.time()) }
             self.__delete(_file['address'])
             self.__write(content, _file['address'])
-            self.__edit_sys('Disk/$Registry', '::'.join(map(str, _file.values())), _mode='a')
+            self.__sys_data('Disk/$Registry', '::'.join(map(str, _file.values())), _mode='a')
         elif mode == 'a':
-            registry = self.__edit_sys('Disk/$Registry')
-            try: _address = [ _item for _item in registry if _item.split('::')[0] == vPath ][0]
+            registry = self.__sys_data('Disk/$Registry')
+            try: _file = [ _item for _item in registry if _item.split('::')[0] == vPath ][0].split('::')
             except IndexError:
                 self.write(vPath, content, mode = 'w')
                 return
 
-            _file = dict(zip([ 'path', 'address', 'timestamp' ], _address.split('::')))
+            _file = dict(zip([ 'path', 'address', 'timestamp' ], _file))
 
             data = self.__read(_file['address'])
             _data = '\n'.join((str(data), str(content)))
@@ -153,14 +143,33 @@ class Disk:
         return len(content)
 
     def read(self, vPath: str) -> FileResponse:
-        registry = self.__edit_sys('Disk/$Registry')
-        try: _address = [ _item for _item in registry if _item.split('::')[0] == vPath ][0]
-        except IndexError:
-            print(vPath)
-            print([ _item.split('::')[0] for _item in registry ], vPath)
-            raise FileNotFoundError(f"'{vPath}' doesn't exist.")
-        
-        _file = dict(zip([ 'path', 'address', 'timestamp' ], _address.split('::')))
+        """
+        Get a file, its contents and some information.\n
 
-        data = self.__read(_file['address'])
-        return data
+        - Params:\n
+            vPath: path of the file to be read\n
+        - Returns: FileResponse
+        """
+
+        registry = self.__sys_data('Disk/$Registry')
+        try: _file = [ _item for _item in registry if _item.split('::')[0] == vPath ][0].split('::')
+        except KeyError: raise FileNotFoundError(f"'{vPath}' doesn't exist.")
+        
+        data = self.__read(f'/{_file[1]}')
+        return FileResponse(data, _file[2])
+    
+    def delete(self, vPath: str) -> int:
+        """
+        Remove a file from a disk\n
+
+        - Params:\n
+            vPath: path of the file to be deleted\n
+        - Returns: weight of deleted content, in bytes
+        """
+
+        registry = self.__sys_data('Disk/$Registry')
+        try: _file = [ _item for _item in registry if _item.split('::')[0] == vPath ][0].split('::')
+        except KeyError: raise FileNotFoundError(f"'{vPath}' doesn't exist.")
+        
+        data = self.__read(f'/{_file[1]}')
+        return FileResponse(data, _file[2])
