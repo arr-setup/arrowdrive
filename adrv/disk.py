@@ -79,10 +79,10 @@ class Disk:
         if _mode == 'r':
             return self.__read(_path, 'UTF-8').split('\n')
         elif _mode == 'w':
-            self.__write(_data, _path)
+            self.__write(_data.decode(), _path)
         elif _mode == 'a':
-            data = self.__read(_path)
-            _data = '\n'.join((str(data), str(_data)))
+            data = self.__read(_path, 'UTF-8')
+            _data = '\n'.join((data, _data.decode()))
             self.__delete(_path)
             self.__write(_data, _path)
 
