@@ -17,7 +17,7 @@ class PhysicalBridge:
         with open(newPath, 'wb') as _file:
             _file.write(self.disk.read(vPath).content)
 
-        return self.disk.open_file(vPath)
+        return self.disk.read(vPath)
 
     def send(self, filePath: str, vPath: str, name: str = None):
         if name is None:
@@ -39,5 +39,5 @@ class VirtualBridge:
         else:
             sender, receiver = self.left, self.right
 
-        _pkg = sender.open_file(targetPath)
+        _pkg = sender.read(targetPath)
         receiver.write(_pkg.content, finalPath, _pkg.name)
