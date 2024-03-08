@@ -74,7 +74,7 @@ class Disk:
 
         return len(_file)
 
-    def __sys_data(self, _name: str, _data: str = '', _mode: str = 'r') -> str | None:
+    def __sys_data(self, _name: str, _data: str = '', _mode: str = 'r') -> list[str] | None:
         _path = os.path.join('/.sys/', _name)
         if _mode == 'r':
             return self.__read(_path, 'UTF-8').split('\n')
@@ -86,6 +86,9 @@ class Disk:
             self.__delete(_path)
             self.__write(_data, _path)
 
+    def __ls(self) -> list[str]:
+        with zipfile.ZipFile(self.path, 'r') as zip_buffer:
+            return zip_buffer.namelist()
     
     """
     Main Disk methods
@@ -107,8 +110,15 @@ class Disk:
         self.__sys_data('Disk/$Properties', f'{self.name}\n{self.max_size.raw}\n{round(time.time())}\n{VERSION}\n{SUPPORTS}', 'w')
 
         # Tests :
-        # self.__sys_data()
+        name = self.__sys_data('Disk/$Properties')[0]
+        if name != self.name:
+            raise BrokenDiskError('Something went wrong while formatting your disk.')
 
+        if len(self.__ls()) != 2:
+            raise BrokenDiskError('Something went wrong while formatting your disk.')
+        
+        print('Formatting done')
+        
     def write(self, vPath: str, content: str | bytes = '', mode: str = 'a') -> int:
         """
         Write a file to Disk.\n
