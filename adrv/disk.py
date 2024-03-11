@@ -1,5 +1,6 @@
 import io
 import os
+import tempfile
 import time
 import uuid
 import zipfile
@@ -12,17 +13,12 @@ SUPPORTS = "0.2"
 
 class Disk:
     def __init__(self, name: str = 'vDisk', path: str = './', max_size: int = 1000 ** 2):
-        self.name = name
+        self.name = name.upper()
         self.path = f"{path}/{name}.adrv".replace('//', '/')
         self.max_size = Size(max_size)
         self.size = Size(0)
 
-        try:
-            with open(self.path, 'rb') as file:
-                for block in file:
-                    if block[0] != b'\0':
-                        raise ValueError("File is not bytes")
-        except:
+        if not zipfile.is_zipfile(self.path):
             if not os.path.exists(path):
                 try: os.makedirs(path)
                 except: pass
@@ -30,27 +26,38 @@ class Disk:
             with open(self.path, 'wb') as file:
                 self.format_disk()
 
-    def __read(self, _path: str, encoding: str | None = None) -> str:
-         with open(self.path, 'rb') as _file:
+    def __read(self, _path: str, encoding: str | None = 'UTF-8') -> str:
+        with open(self.path, 'rb') as _file:
             archive = io.BytesIO(_file.read())
 
             with zipfile.ZipFile(archive, 'r') as zip_buffer:
-                try:
-                    content = zip_buffer.read(_path)
-                    if encoding is None:
-                        return content
-                    else:
-                        return content.decode(encoding)
+                with tempfile.TemporaryDirectory() as tempDir:
+                    zip_buffer.extractall(tempDir)
+                    vPath = os.path.normpath(_path)
+                    tempPath = os.path.normpath(f"{tempDir}/{vPath}")
 
-                except:
-                    raise FileNotFoundError(f"{_path} was not found.")
+                    if os.path.exists(tempPath):
+                        if os.path.isdir(tempPath):
+                            raise FileIsDirectoryError(f"{vPath} is a directory.")
+                        else:
+                            with open(tempPath, 'rb', encoding = None) as extracted_file:
+                                content = extracted_file.read()
+                                
+                            return content.decode(encoding)
+                    else:
+                        raise FileNotFoundError(f"{vPath} was not found.")
                     
     def __write(self, content: str | bytes, _path: str) -> int:
         if self.size.raw + len(content) > self.max_size.raw:
             raise FullDiskError(f'Could not write anything at {_path} as its content would overload the disk. Available space: {Size(self.max_size.raw - self.size.raw).literal()} / File size: {len(content)}')
         else:
-            with zipfile.ZipFile(self.path, 'a') as zip_buffer:
-                zip_buffer.writestr(_path, content)
+            with zipfile.ZipFile(self.path, 'a') as archive:
+                with tempfile.TemporaryDirectory() as tempDir:
+                    filePath = os.path.normpath(f"{tempDir}/cachedfile")
+                    with open(filePath, 'w' if type(content) == str else 'wb') as _file:
+                        _file.write(content)
+                
+                    archive.write(filePath, _path)
             
             self.size.raw += len(content)
             return len(content)
@@ -77,13 +84,14 @@ class Disk:
     def __sys_data(self, _name: str, _data: str = '', _mode: str = 'r') -> list[str] | None:
         _path = os.path.join('/.sys/', _name)
         if _mode == 'r':
-            return self.__read(_path, 'UTF-8').split('\n')
+            return self.__read(_path, 'UTF-8').replace('\r', '').split('\n')
         elif _mode == 'w':
             self.__write(_data, _path)
         elif _mode == 'a':
             data = self.__read(_path, 'UTF-8')
-            _data = '\n'.join((data, _data))
-            self.__delete(_path)
+            if data != '':
+                _data = '\n'.join((data, _data))
+            
             self.__write(_data, _path)
 
     def __ls(self) -> list[str]:
@@ -107,17 +115,23 @@ class Disk:
         
         # Create system files
         self.__sys_data('Disk/$Registry', _mode = 'w')
-        self.__sys_data('Disk/$Properties', f'{self.name}\n{self.max_size.raw}\n{round(time.time())}\n{VERSION}\n{SUPPORTS}', 'w')
+        self.__sys_data('Disk/$Properties', f'{self.name.upper()}\n{self.max_size.raw}\n{round(time.time())}\n{VERSION}\n{SUPPORTS}', 'w')
 
         # Tests :
         name = self.__sys_data('Disk/$Properties')[0]
         if name != self.name:
+            self.extract_all('./bin')
             raise BrokenDiskError('Something went wrong while formatting your disk.')
 
         if len(self.__ls()) != 2:
+            self.extract_all('./bin')
             raise BrokenDiskError('Something went wrong while formatting your disk.')
         
         print('Formatting done')
+    
+    def extract_all(self, target: str) -> None:
+        with zipfile.ZipFile(self.path) as zip_buffer:
+            zip_buffer.extractall(target)
         
     def write(self, vPath: str, content: str | bytes = '', mode: str = 'a') -> int:
         """
@@ -161,12 +175,12 @@ class Disk:
         - Returns: FileResponse
         """
 
-        registry = self.__sys_data('Disk/$Registry')
+        registry = reversed(self.__sys_data('Disk/$Registry'))
         try: _file = [ _item for _item in registry if _item.split('::')[0] == vPath ][0].split('::')
         except KeyError: raise FileNotFoundError(f"'{vPath}' doesn't exist.")
         
         data = self.__read(f'/{_file[1]}')
-        return FileResponse(data, _file[2])
+        return FileResponse(data, _file[1].split('/')[-1], _file[2])
     
     def delete(self, vPath: str) -> int:
         """
