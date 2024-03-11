@@ -177,7 +177,7 @@ class Disk:
 
         registry = reversed(self.__sys_data('Disk/$Registry'))
         try: _file = [ _item for _item in registry if _item.split('::')[0] == vPath ][0].split('::')
-        except KeyError: raise FileNotFoundError(f"'{vPath}' doesn't exist.")
+        except IndexError: raise FileNotFoundError(f"'{vPath}' doesn't exist.")
         
         data = self.__read(f'/{_file[1]}')
         return FileResponse(data, _file[1].split('/')[-1], _file[2])
