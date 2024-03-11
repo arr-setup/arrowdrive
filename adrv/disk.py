@@ -132,6 +132,14 @@ class Disk:
     def extract_all(self, target: str) -> None:
         with zipfile.ZipFile(self.path) as zip_buffer:
             zip_buffer.extractall(target)
+    
+    def f_list(self, include_ts: bool = False) -> list[str | dict]:
+        registry = self.__sys_data('Disk/$Registry')
+        if include_ts:
+            return [ dict(zip([ 'path', 'timestamp' ], (_item.split('::')[0], _item.split('::')[2]))) for _item in registry ]
+        else:
+            return [ _item.split('::')[0] for _item in registry ]
+
         
     def write(self, vPath: str, content: str | bytes = '', mode: str = 'a') -> int:
         """

@@ -10,3 +10,6 @@ try:
 except Exception as e:
     print(e)
     disk.extract_all('./dist')
+
+print(disk.f_list())
+print(disk.f_list(include_ts = True))
