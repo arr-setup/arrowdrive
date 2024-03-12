@@ -4,8 +4,6 @@ vDisk extension: `.adrv`
 
 # How to use it
 
-
-
 ## 1- Create a Disk object
 ```py
 from adrv.disk import Disk
@@ -18,7 +16,8 @@ myDisk = Disk('./vDisks/myDisk.adrv', 4 * 1000 ** 3) # Create a 4GB disk.
 > `path: str` - The directory where the vDisk will be created<br>
 > `size: int` - the size of the vDisk, in bytes<br>
 
-You just created a new Disk object that points to the given path. If the disk doesn't exist, it will be created with the necessary directories.
+You just created a new Disk object that points to the given path. If the disk doesn't exist, it will be created with the necessary directories.<br>
+**Important:** The 4GB limit set up isn't pre-allocated and it's only a virtual limit. It can easily be edited with the class attributes (it should be fixed soon)
 
 ## 2- Create a file...
 
@@ -33,7 +32,7 @@ from adrv.bridge import PhysicalBridge
 myDisk = Disk('./vDisks/myDisk.adrv', 4 * 1000 ** 3) # Create a 4GB disk.
 bridge = PhysicalBridge(myDisk)
 
-bridge.copy('./images/drawing.png', '/drawings')
+bridge.send('./images/drawing.png', '/drawings')
 ```
 
 **PhysicalBridge.copy() - Parameters:**
@@ -67,14 +66,47 @@ vBridge.cross('/images/drawing.png', '/drawings', rtl = False) # Copy drawing.pn
 ### Manually
 ```py
 from adrv.disk import Disk
-from adrv.bridge import PhysicalBridge, VirtualBridge
 
 myDisk = Disk('./vDisks/myDisk.adrv', 4 * 1000 ** 3) # Create a 4GB disk.
-
-myDisk.write('Hello World', '/text', 'helloworld.txt')
+myDisk.write('/hello/world.txt', 'Hello World', 'w') # You can use it in a variable to see how many bytes have been written
 ```
 
 **Disk.write() - Parameters:**
-> `content: str | bytes` - The file content<br>
 > `vPath: str` - The file destination on your virtual disk<br>
-> `newName: str` - The name of your file in the virtual disk<br>
+> `content: str | bytes` - The file content<br>
+> `mode: str` _'a' or 'w'_ - Defines whether the file should be overwritten or not<br>
+
+## 3- Read a file
+
+The only way to read a file is the Disk.read() method:
+```py
+from adrv.disk import Disk
+
+myDisk = Disk('./vDisks/myDisk.adrv', 4 * 1000 ** 3) # Create a 4GB disk.
+file = myDisk.read('/hello/world.txt')
+```
+
+The `file` variable contains a `FileResponse` with 4 attributes:
+> `content: str | bytes` - The file content as you wrote it
+> `name: str` - The name of the file
+> `timestamp: int` - The **virtual file** creation time
+> `size: int` - The size of the file
+
+**Disk.read() - Parameters:**
+> `vpath: str` - Path of the file to read
+
+## 4- Delete a file
+
+```py
+from adrv.disk import Disk
+
+myDisk = Disk('./vDisks/myDisk.adrv', 4 * 1000 ** 3) # Create a 4GB disk.
+myDisk.delete('/hello/world.txt') # Similary to write(), you can get the amount of bytes removed from the disk
+```
+
+**Disk.delete() - Parameters:**
+> `vpath: str` - Path of the file to deleted
+
+## 5- Formatting and file system informations
+
+### Formatting the disk
