@@ -54,11 +54,11 @@ class Disk:
             with zipfile.ZipFile(self.path, 'a') as archive:
                 with tempfile.TemporaryDirectory() as tempDir:
                     filePath = os.path.normpath(f"{tempDir}/cachedfile")
-                    with open(filePath, 'w' if type(content) == str else 'wb') as _file:
+                    with open(filePath, 'w' if isinstance(content, str) else 'wb') as _file:
                         _file.write(content)
-                
+
                     archive.write(filePath, _path)
-            
+
             self.size.raw += len(content)
             return len(content)
     
@@ -71,10 +71,10 @@ class Disk:
         
         new_archive = io.BytesIO()
         with zipfile.ZipFile(self.path, 'r') as zip_buffer, zipfile.ZipFile(new_archive, 'a', zipfile.ZIP_DEFLATED) as new_zip:
-            for file_info in zip_buffer.infolist():
-                if file_info.filename != _path:
-                    content = zip_buffer.read(file_info.filename)
-                    new_zip.writestr(file_info, content)
+            for filename in zip_buffer.namelist():
+                if filename[-1:] != _path:
+                    content = zip_buffer.read(filename)
+                    new_zip.writestr(filename, content)
 
             with open(self.path, 'wb') as buffer:
                 buffer.write(new_archive.getvalue())
@@ -133,7 +133,7 @@ class Disk:
         else:
             return [ _item.split('::')[0] for _item in registry ]
 
-    def disgnosis(self, snooze: bool = False) -> bool:
+    def diagnosis(self, snooze: bool = False) -> bool:
         if not snooze:
             print("Evaluating health of your disk...")
 
