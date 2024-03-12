@@ -8,7 +8,7 @@ import zipfile
 from ._cls import *
 from .utils import *
 
-VERSION = "0.3.0"
+VERSION = "0.2.0"
 SUPPORTS = "0.2.0"
 
 class Disk:
