@@ -8,8 +8,8 @@ import zipfile
 from ._cls import *
 from .utils import *
 
-VERSION = "0.2"
-SUPPORTS = "0.2"
+VERSION = "0.3.0"
+SUPPORTS = "0.2.0"
 
 class Disk:
     def __init__(self, name: str = 'vDisk', path: str = './', max_size: int = 1000 ** 2):
@@ -115,19 +115,12 @@ class Disk:
         
         # Create system files
         self.__sys_data('Disk/$Registry', _mode = 'w')
-        self.__sys_data('Disk/$Properties', f'{self.name.upper()}\n{self.max_size.raw}\n{round(time.time())}\n{VERSION}\n{SUPPORTS}', 'w')
+        self.__sys_data('Disk/$Properties', f'{self.name.upper()}\n{self.max_size.raw}\n{round(time.time())}\n{VERSION}', 'w')
 
         # Tests :
-        name = self.__sys_data('Disk/$Properties')[0]
-        if name != self.name:
-            self.extract_all('./bin')
-            raise BrokenDiskError('Something went wrong while formatting your disk.')
-
-        if len(self.__ls()) != 2:
-            self.extract_all('./bin')
-            raise BrokenDiskError('Something went wrong while formatting your disk.')
-        
-        print('Formatting done')
+        if not self.diagnosis(snooze = True):
+            self.extract_all('./.local')
+            raise BrokenDiskError("Something went wrong while formatting your disk. It has automatically been extracted in .local")
     
     def extract_all(self, target: str) -> None:
         with zipfile.ZipFile(self.path) as zip_buffer:
@@ -140,7 +133,51 @@ class Disk:
         else:
             return [ _item.split('::')[0] for _item in registry ]
 
+    def disgnosis(self, snooze: bool = False) -> bool:
+        if not snooze:
+            print("Evaluating health of your disk...")
+
+        if not zipfile.is_zipfile(self.path):
+            if not snooze:
+                print("    Data format: \033[31;40mIncorrect\033[0m")
+            
+            return False
+        elif not snooze:
+            print("    Data format: \033[32;40mCorrect\033[0m")
         
+        last_v = self.__sys_data('Disk/$Properties')[3]
+        if last_v.split('.')[0] < VERSION.split('.')[0] or (last_v.split('.')[0] == VERSION.split('.')[0] and last_v.split('.')[1] < VERSION.split('.')[1]):
+            if snooze:
+                return False
+            else:
+                print(f"    Disk version: \033[31;40mUnsupported\033[0m ({last_v})")
+        elif not snooze:
+            print("    Disk version: \033[32;40mSupported\033[0m")
+
+        name = self.__sys_data('Disk/$Properties')[0]
+        if name != self.name:
+            self.__write(f"{self.name} should be {name}", "/.sys/logs/NameError")
+            if snooze:
+                return False
+            else:
+                print("    Disk name: \033[31;40mNot corresponding\033[0m")
+        elif not snooze:
+            print("    Disk name: \033[32;40mCorresponding\033[0m")
+
+        for _name in ['$Registry', '$Properties']:
+            if f".sys/Disk/{_name}" not in self.__ls():
+                self.__write(f'{f"/.sys/Disk/{_name}"} is missing: \n{self.__ls()}', "/.sys/logs/FileError")
+                if snooze:
+                    return False
+                else:
+                    print("    Primary files: \033[31;40mMissing\033[0m")
+                break
+        else:
+            if not snooze:
+                print("    Primary files: \033[32;40mPresent\033[0m")
+        
+        return True
+
     def write(self, vPath: str, content: str | bytes = '', mode: str = 'a') -> int:
         """
         Write a file to Disk.\n
@@ -188,7 +225,7 @@ class Disk:
         except IndexError: raise FileNotFoundError(f"'{vPath}' doesn't exist.")
         
         data = self.__read(f'/{_file[1]}')
-        return FileResponse(data, _file[1].split('/')[-1], _file[2])
+        return FileResponse(data, os.path.basename(_file[1]), _file[2])
     
     def delete(self, vPath: str) -> int:
         """
