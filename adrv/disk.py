@@ -86,7 +86,7 @@ class Disk:
                 filePath = os.path.normpath(f"{tempDir}/cachedfile")
                 with open(filePath, 'w' if isinstance(content, str) else 'wb') as _file:
                     _file.write(content)
-
+                
                 archive.write(filePath, _path)
 
         self.size.raw += len(content)
@@ -265,7 +265,7 @@ class Disk:
             _file = { 'path': vPath, 'address': str(uuid.uuid4()), 'timestamp': round(time.time()) }
             self.__delete(_file['address'])
             self.__write(content, _file['address'])
-            self.__sys_data('Disk/$Registry', '::'.join(map(str, _file.values())), _mode='a')
+            self.__sys_data('Disk/$Registry', '::'.join(map(str, _file.values())), _mode = 'a')
         elif mode == 'a':
             registry = self.__sys_data('Disk/$Registry')
             try:
@@ -317,10 +317,11 @@ class Disk:
         registry = self.__sys_data('Disk/$Registry')
         try:
             _file = [ _item for _item in registry if _item.split('::')[0] == vPath ][0].split('::')
+            new_registry = '\n'.join([ _item for _item in registry if _item.split('::')[0] != vPath ])
         except KeyError:
             raise FileNotFoundError(f"'{vPath}' doesn't exist.")
         
         data = self.__read(f'/{_file[1]}')
         self.__delete(_file[1])
-        # self.__sys_data('Disk/$Registry', _mode='a')
+        self.__sys_data('Disk/$Registry',_data = new_registry, _mode = 'w')
         return len(data)
