@@ -108,7 +108,7 @@ class Disk:
         except FileNotFoundError:
             return 0
         
-        new_archive = io.BytesIO()
+        new_archive = io.BytesIO().getvalue()
         with zipfile.ZipFile(self.path, 'r') as zip_buffer, zipfile.ZipFile(new_archive, 'a', zipfile.ZIP_DEFLATED) as new_zip:
             for filename in zip_buffer.namelist():
                 if filename[-1:] != _path:
