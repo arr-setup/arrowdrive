@@ -237,7 +237,7 @@ class Disk:
 
         for _name in ['$Registry', '$Properties']:
             if f".sys/Disk/{_name}" not in self.__ls():
-                self.__write(f'{f"/.sys/Disk/{_name}"} is missing: \n{self.__ls()}', "/.sys/logs/FileError")
+                self.__write(f'/.sys/Disk/{_name} is missing: \n{self.__ls()}', "/.sys/logs/FileError")
                 if snooze:
                     return False
                 else:
