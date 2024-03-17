@@ -210,56 +210,39 @@ class Disk:
         Returns:
             bool: True if the disk is healthy, False otherwise.
         """
+
         if not snooze:
             print("Evaluating health of your disk...")
 
+        status = {}
+
         if not zipfile.is_zipfile(self.path):
-            if not snooze:
-                print("    Data format: \033[31;40mIncorrect\033[0m")
-            
-            return False
-        elif not snooze:
-            print("    Data format: \033[32;40mCorrect\033[0m")
+            status["DataFormat"] = "\033[31;40mIncorrect\033[0m"
+            if snooze: return False
+        else:
+            status["DataFormat"] = "\033[32;40mCorrect\033[0m"
         
         try:
             last_v = self.__sys_data('Disk/$Properties')[3]
             if last_v.split('.')[0] < VERSION.split('.')[0] or (last_v.split('.')[0] == VERSION.split('.')[0] and last_v.split('.')[1] < VERSION.split('.')[1]):
-                if snooze:
-                    return False
-                else:
-                    print(f"    Disk version: \033[31;40mUnsupported\033[0m ({last_v})")
-            elif not snooze:
-                print("    Disk version: \033[32;40mSupported\033[0m")
-        except:
-            print(f"    Disk version: \033[31;40mUnknown\033[0m")
-
-        try:
-            name = self.__sys_data('Disk/$Properties')[0]
-            if name != self.name:
-                self.__write(f"{self.name} should be {name}", "/.sys/logs/NameError")
-                if snooze:
-                    return False
-                else:
-                    print("    Disk name: \033[31;40mNot corresponding\033[0m")
-            elif not snooze:
-                print("    Disk name: \033[32;40mCorresponding\033[0m")
-        except:
-            print("    Disk name: \033[31;40mUndefined\033[0m")
-
-        try:
-            for _name in ['$Registry', '$Properties']:
-                if f".sys/Disk/{_name}" not in self.__ls():
-                    self.__write(f'{f"/.sys/Disk/{_name}"} is missing: \n{self.__ls()}', "/.sys/logs/FileError")
-                    if snooze:
-                        return False
-                    else:
-                        print("    Primary files: \033[31;40mMissing\033[0m")
-                    break
+                if snooze: return False
+                status["DiskVersion"] = f"\033[31;40mUnsupported\033[0m ({last_v} | Required: {SUPPORTS})"
             else:
-                if not snooze:
-                    print("    Primary files: \033[32;40mPresent\033[0m")
-        except FileNotFoundError:
-            print("    Primary files: \033[31;40mMissing\033[0m")
+                status["DiskVersion"] = "\033[32;40mSupported\033[0m"
+        except:
+            status["DiskVersion"] = "\033[31;40mUnknown\033[0m"
+
+        for _name in ['$Registry', '$Properties']:
+            if f".sys/Disk/{_name}" not in self.__ls():
+                if snooze: return False
+                status["PrimaryFiles"] = "\033[31;40mMissing\033[0m"
+                break
+        else:
+            status["PrimaryFiles"] = "\033[32;40mPresent\033[0m"
+        
+        if not snooze:
+            for section, result in status.items():
+                print(section, ": ", result, sep = "")
         
         return True
 
