@@ -126,11 +126,11 @@ _Available in 1.1_
 
 |                       	| Basic formatting   	| Soft formatting    	|
 |--------------------------	|----------------------	|---------------------- |
-| Data preservation     	| :x:                	| :white_check_mark: 	|
-| Guarenteed efficiency* 	| :white_check_mark: 	| :x:                	|
-| Generates disk if absent  | :x:                   | :white_check_mark:    |
-| Convert to another fs     | :x:                   | :x:                   |
-| Use fs from another vDisk | :x:                   | :clock9: _1.1_        |
+| Data preservation     	| ❌ | ✅ |
+| Guarenteed efficiency* 	| ✅ | ❌ |
+| Generates disk if absent  | ❌ | ✅ |
+| Convert to another fs     | ❌ | ❌ |
+| Use fs from another vDisk | ❌ | 🕗 _1.1_ |
 
 _* A guaranteed efficiency means the disk doesn't have any chance to be broken after being formatted._ <br>
 
