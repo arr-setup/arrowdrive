@@ -156,7 +156,7 @@ with open(disk.path, 'w') as file:
 disk.diagnosis() # Prints the result again (it should be bad)
 ```
 
-**Note: After a formatting, you have no need to diagnose the disk (it is done automattically)
+**Note: After a formatting, you have no need to diagnose the disk (it is done automattically)**
 
 ### Other methods
 
