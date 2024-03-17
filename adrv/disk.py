@@ -1,5 +1,6 @@
 import io
 import os
+import shutil
 import tempfile
 import time
 import uuid
@@ -108,15 +109,19 @@ class Disk:
         except FileNotFoundError:
             return 0
         
-        new_archive = io.BytesIO().getvalue()
-        with zipfile.ZipFile(self.path, 'r') as zip_buffer, zipfile.ZipFile(new_archive, 'a', zipfile.ZIP_DEFLATED) as new_zip:
-            for filename in zip_buffer.namelist():
-                if filename[-1:] != _path:
-                    content = zip_buffer.read(filename)
-                    new_zip.writestr(filename, content)
+        with tempfile.TemporaryDirectory() as tempDir, tempfile.TemporaryDirectory() as tempCache, zipfile.ZipFile(self.path, 'r') as old_archive:
+            # Re-write without the file
+            old_archive.extractall(tempDir)
 
-            with open(self.path, 'wb') as buffer:
-                buffer.write(new_archive.getvalue())
+            try:
+                os.remove(os.path.join(tempDir, _path))
+            except:
+                return 0
+
+            # Compression
+            _cachePath = shutil.make_archive(os.path.join(tempCache, 'cachedArchive'), 'zip', tempDir)
+            with open(_cachePath, 'rb') as _cache, open(self.path, 'wb') as _archive:
+                _archive.write(_cache.read())
 
         return len(_file)
 
@@ -216,36 +221,45 @@ class Disk:
         elif not snooze:
             print("    Data format: \033[32;40mCorrect\033[0m")
         
-        last_v = self.__sys_data('Disk/$Properties')[3]
-        if last_v.split('.')[0] < VERSION.split('.')[0] or (last_v.split('.')[0] == VERSION.split('.')[0] and last_v.split('.')[1] < VERSION.split('.')[1]):
-            if snooze:
-                return False
-            else:
-                print(f"    Disk version: \033[31;40mUnsupported\033[0m ({last_v})")
-        elif not snooze:
-            print("    Disk version: \033[32;40mSupported\033[0m")
-
-        name = self.__sys_data('Disk/$Properties')[0]
-        if name != self.name:
-            self.__write(f"{self.name} should be {name}", "/.sys/logs/NameError")
-            if snooze:
-                return False
-            else:
-                print("    Disk name: \033[31;40mNot corresponding\033[0m")
-        elif not snooze:
-            print("    Disk name: \033[32;40mCorresponding\033[0m")
-
-        for _name in ['$Registry', '$Properties']:
-            if f".sys/Disk/{_name}" not in self.__ls():
-                self.__write(f'/.sys/Disk/{_name} is missing: \n{self.__ls()}', "/.sys/logs/FileError")
+        try:
+            last_v = self.__sys_data('Disk/$Properties')[3]
+            if last_v.split('.')[0] < VERSION.split('.')[0] or (last_v.split('.')[0] == VERSION.split('.')[0] and last_v.split('.')[1] < VERSION.split('.')[1]):
                 if snooze:
                     return False
                 else:
-                    print("    Primary files: \033[31;40mMissing\033[0m")
-                break
-        else:
-            if not snooze:
-                print("    Primary files: \033[32;40mPresent\033[0m")
+                    print(f"    Disk version: \033[31;40mUnsupported\033[0m ({last_v})")
+            elif not snooze:
+                print("    Disk version: \033[32;40mSupported\033[0m")
+        except:
+            print(f"    Disk version: \033[31;40mUnknown\033[0m")
+
+        try:
+            name = self.__sys_data('Disk/$Properties')[0]
+            if name != self.name:
+                self.__write(f"{self.name} should be {name}", "/.sys/logs/NameError")
+                if snooze:
+                    return False
+                else:
+                    print("    Disk name: \033[31;40mNot corresponding\033[0m")
+            elif not snooze:
+                print("    Disk name: \033[32;40mCorresponding\033[0m")
+        except:
+            print("    Disk name: \033[31;40mUndefined\033[0m")
+
+        try:
+            for _name in ['$Registry', '$Properties']:
+                if f".sys/Disk/{_name}" not in self.__ls():
+                    self.__write(f'{f"/.sys/Disk/{_name}"} is missing: \n{self.__ls()}', "/.sys/logs/FileError")
+                    if snooze:
+                        return False
+                    else:
+                        print("    Primary files: \033[31;40mMissing\033[0m")
+                    break
+            else:
+                if not snooze:
+                    print("    Primary files: \033[32;40mPresent\033[0m")
+        except FileNotFoundError:
+            print("    Primary files: \033[31;40mMissing\033[0m")
         
         return True
 
@@ -317,7 +331,7 @@ class Disk:
         registry = self.__sys_data('Disk/$Registry')
         try:
             _file = [ _item for _item in registry if _item.split('::')[0] == vPath ][0].split('::')
-            new_registry = '\n'.join([ _item for _item in registry if _item.split('::')[0] != vPath ])
+            new_registry = '\n'.join([ _item for _item in registry if _item.split('::')[0] != vPath and _item != '' ])
         except KeyError:
             raise FileNotFoundError(f"'{vPath}' doesn't exist.")
         
