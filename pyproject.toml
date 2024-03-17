@@ -1,0 +1,15 @@
+[tool.poetry]
+name = "adrv"
+version = "1.0.0"
+description = ""
+authors = ["happex <110610727+okayhappex@users.noreply.github.com>"]
+license = "GPL-3.0"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

@@ -1,6 +1,6 @@
 import os
 
-from .disk import Disk
+from . import Disk
 from ._cls import *
 
 class PhysicalBridge:
