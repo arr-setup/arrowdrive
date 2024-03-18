@@ -157,7 +157,7 @@ class Disk:
             list[str]: The list of files in the disk.
         """
         with zipfile.ZipFile(self.path, 'r') as zip_buffer:
-            return zip_buffer.namelist()
+            return list(set(zip_buffer.namelist()))
     
     def format_disk(self):
         """
@@ -184,7 +184,7 @@ class Disk:
         with zipfile.ZipFile(self.path) as zip_buffer:
             zip_buffer.extractall(target)
     
-    def f_list(self, include_ts: bool = False) -> list[str | dict]:
+    def f_list(self, include_ts: bool = False, sys = False) -> list[str | dict]:
         """
         Lists files in the disk.
 
@@ -194,11 +194,29 @@ class Disk:
         Returns:
             list[str | dict]: The list of files in the disk.
         """
+
         registry = self.__sys_data('Disk/$Registry')
-        if include_ts:
-            return [ dict(zip([ 'path', 'timestamp' ], (_item.split('::')[0], _item.split('::')[2]))) for _item in registry ]
-        else:
-            return [ _item.split('::')[0] for _item in registry ]
+        namelist = []
+
+        for _item in registry:
+            if _item == '':
+                continue
+
+            if include_ts:
+                namelist.append({ 'path': _item.split('::')[0], 'timestamp': _item.split('::')[2] })
+            else:
+                namelist.append(_item.split('::')[0])
+        
+        if sys:
+            print(self.__ls())
+            for name in self.__ls():
+                if name.startswith('.sys/') and not name.endswith('/'):
+                    if include_ts:
+                        namelist.append({'path': name, 'timestamp': 0 })
+                    else:
+                        namelist.append(name)
+        
+        return namelist
 
     def diagnosis(self, snooze: bool = False) -> bool:
         """

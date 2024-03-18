@@ -124,13 +124,13 @@ _Available in 1.1_
 
 ### What type of formatting to use
 
-|                       	| Basic formatting   	| Soft formatting    	|
-|--------------------------	|----------------------	|---------------------- |
-| Data preservation     	| ❌ | ✅ |
-| Guarenteed efficiency* 	| ✅ | ❌ |
-| Generates disk if absent  | ❌ | ✅ |
-| Convert to another fs     | ❌ | ❌ |
-| Use fs from another vDisk | ❌ | 🕗 _1.1_ |
+|                       	        | Basic formatting   	| Soft formatting    	|
+|----------------------------------	|----------------------	|---------------------- |
+| Data preservation     	        | ❌ | ✅ |
+| Guarenteed efficiency*           	| ✅ | ❌ |
+| Generates a new disk if missing   | ❌ | ✅ |
+| Convert to another fs (i.g. NTFS) | ❌ | ❌ |
+| Copy sys files from another vDisk | ❌ | 🕗 _1.1_ |
 
 _* A guaranteed efficiency means the disk doesn't have any chance to be broken after being formatted._ <br>
 
