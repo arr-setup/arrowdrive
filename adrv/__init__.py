@@ -23,7 +23,7 @@ class Disk:
             max_size (int, optional): The maximum size of the disk in bytes. Defaults to 1000000.
         """
         self.name = name.upper()
-        self.path = f"{path}/{name}.adrv".replace('//', '/')
+        self.path = os.path.join(path, f"{name}.adrv")
         self.max_size = Size(max_size)
         self.size = Size(0)
 
@@ -34,8 +34,15 @@ class Disk:
                 except:
                     pass
                 
-            with open(self.path, 'wb') as file:
-                self.format_disk()
+            self.format_disk()
+        
+        if not self.diagnosis(True).primary_files:
+            self.format_disk()
+        
+        properties = self.__sys_data('Disk/$Properties')
+        self.name = properties[0]
+        self.max_size = Size(int(properties[1]))
+        self.size = Size(os.path.getsize(self.path))
 
     def __read(self, _path: str, encoding: str | None = 'UTF-8') -> str:
         """
@@ -233,7 +240,7 @@ class Disk:
         
         return namelist
 
-    def diagnosis(self, snooze: bool = False) -> bool:
+    def diagnosis(self, snooze: bool = False) -> DiagnoseResponse:
         """
         Evaluates the health of the disk.
 
@@ -251,33 +258,39 @@ class Disk:
 
         if not zipfile.is_zipfile(self.path):
             status["DataFormat"] = "\033[31;40mIncorrect\033[0m"
-            if snooze: return False
         else:
             status["DataFormat"] = "\033[32;40mCorrect\033[0m"
-        
+
         try:
             last_v = self.__sys_data('Disk/$Properties')[3]
             if last_v.split('.')[0] < VERSION.split('.')[0] or (last_v.split('.')[0] == VERSION.split('.')[0] and last_v.split('.')[1] < VERSION.split('.')[1]):
-                if snooze: return False
                 status["DiskVersion"] = f"\033[31;40mUnsupported\033[0m ({last_v} | Required: {SUPPORTS})"
             else:
                 status["DiskVersion"] = "\033[32;40mSupported\033[0m"
         except:
             status["DiskVersion"] = "\033[31;40mUnknown\033[0m"
 
-        for _name in ['$Registry', '$Properties']:
-            if f".sys/Disk/{_name}" not in self.__ls():
-                if snooze: return False
-                status["PrimaryFiles"] = "\033[31;40mMissing\033[0m"
-                break
-        else:
-            status["PrimaryFiles"] = "\033[32;40mPresent\033[0m"
-        
+        try:
+            for _name in ['$Registry', '$Properties']:
+                if f".sys/Disk/{_name}" not in self.__ls():
+                    status["PrimaryFiles"] = "\033[31;40mMissing\033[0m"
+                    break
+            else:
+                status["PrimaryFiles"] = "\033[32;40mPresent\033[0m"
+        except:
+            status["PrimaryFiles"] = "\033[31;40mMissing\033[0m"
+
         if not snooze:
             for section, result in status.items():
-                print(section, ": ", result, sep = "")
-        
-        return True
+                print(section, ": ", result, sep="")
+
+        response = DiagnoseResponse()
+        response.disk_format = 'Incorrect' not in status['DataFormat']
+        response.is_supported = 'Un' not in status['DiskVersion']  # UN-known and UN-supported return False
+        response.primary_files = 'Present' in status['PrimaryFiles']
+
+        return response
+
 
     def write(self, vPath: str, content: str | bytes = '', mode: str = 'a') -> int:
         """

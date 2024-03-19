@@ -147,7 +147,7 @@ disk = Disk('myDisk', './disks', convert(4, 'GB'))
 disk.format_disk()
 disk.diagnosis() # Prints the result (it should be good)
 
-if not disk.diagnosis(snooze = True): # Snooze prevents the method from printing
+if not disk.diagnosis(snooze = True).result(): # Snooze prevents the method from printing
     print("Your disk is broken")
 
 with open(disk.path, 'w') as file:
@@ -156,7 +156,14 @@ with open(disk.path, 'w') as file:
 disk.diagnosis() # Prints the result again (it should be bad)
 ```
 
-**Note: After a formatting, you have no need to diagnose the disk (it is done automattically)**
+**Response:**
+This method returns a `DiagnoseResponse` with the three following items:<br>
+- `disk_format` - Returns whether the file targeted by the Disk is correct or not (it should always be True except if the first formatting failed)
+- `is_supported` - Returns whether the disk is supported by your version of ADRV
+- `primary_files` - Returns if the necessary system files are in your disk or not (often related with `is_supported`)
+- `result()` - Returns True if all of the above items are True
+
+**Note: After a formatting, you have no need to diagnose the disk (it is done automatically)**
 
 ### Other methods
 
