@@ -19,12 +19,9 @@ class PhysicalBridge:
 
         return self.disk.read(vPath)
 
-    def send(self, filePath: str, vPath: str, name: str = None):
-        if name is None:
-            name = filePath.split('/')[-1]
-
+    def send(self, filePath: str, vPath: str):
         with open(filePath, 'rb') as _file:
-            amount_written = self.disk.write(_file.read(), vPath, name)
+            amount_written = self.disk.write(_file.read(), vPath, 'w')
 
         return amount_written
 
