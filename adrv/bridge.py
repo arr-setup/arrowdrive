@@ -21,7 +21,7 @@ class PhysicalBridge:
 
     def send(self, filePath: str, vPath: str):
         with open(filePath, 'rb') as _file:
-            amount_written = self.disk.write(_file.read(), vPath, 'w')
+            amount_written = self.disk.write(vPath, _file.read(), 'w')
 
         return amount_written
 
