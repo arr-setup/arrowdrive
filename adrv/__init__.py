@@ -159,21 +159,36 @@ class Disk:
         with zipfile.ZipFile(self.path, 'r') as zip_buffer:
             return list(set(zip_buffer.namelist()))
     
-    def format_disk(self):
+    def format_disk(self, modelPath: str | None = None):
         """
         Formats the disk.
         """
+
         blank = io.BytesIO()
         with open(self.path, 'wb') as buffer:
             buffer.write(blank.getvalue())
         
         self.__sys_data('Disk/$Registry', _mode = 'w')
         self.__sys_data('Disk/$Properties', f'{self.name.upper()}\n{self.max_size.raw}\n{round(time.time())}\n{VERSION}', 'w')
-
+        
+        if modelPath is not None:
+            with zipfile.ZipFile(modelPath, 'r') as archive:
+                try:
+                    if '.sys/Disk/$Registry' in archive.namelist():
+                        namelist = [ { "path": item.split('::')[1], "vPath": item.split('::')[0] } for item in archive.read('.sys/Disk/$Registry').decode().split('\n') ]
+                    else:
+                        namelist = [ { "path": path, "vPath": path } for path in archive.namelist() if not path.startswith('.sys') ]
+                except IndexError:
+                    namelist = [ { "path": path, "vPath": path } for path in archive.namelist() if not path.startswith('.sys') ]
+                
+                for name in namelist:
+                    content = archive.read(name['path'])
+                    self.write(name['vPath'], content, 'w')
+        
         if not self.diagnosis(snooze = True):
             self.extract_all('./.local')
-            raise BrokenDiskError("Something went wrong while formatting your disk. It has automatically been extracted in .local")
-    
+            raise BrokenDiskError("Something went wrong while formatting your disk. It has automatically been extracted in .local")    
+
     def extract_all(self, target: str) -> None:
         """
         Extracts all files from the disk to a target directory.

@@ -39,6 +39,3 @@ class VirtualBridge:
 
         _pkg = sender.read(targetPath)
         receiver.write(_pkg.content, finalPath, _pkg.name)
-    
-    def soft_format(vDisk: Disk, model: Disk | None = None):
-        pass
