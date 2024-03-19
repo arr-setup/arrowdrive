@@ -9,7 +9,7 @@ import zipfile
 from ._cls import *
 from .utils import *
 
-VERSION = "1.0.4"
+VERSION = "1.1.0"
 SUPPORTS = "1.0.0"
 
 class Disk:
@@ -23,7 +23,7 @@ class Disk:
             max_size (int, optional): The maximum size of the disk in bytes. Defaults to 1000000.
         """
         self.name = name.upper()
-        self.path = f"{path}/{name}.adrv".replace('//', '/')
+        self.path = os.path.join(path, f"{name}.adrv")
         self.max_size = Size(max_size)
         self.size = Size(0)
 
@@ -34,8 +34,15 @@ class Disk:
                 except:
                     pass
                 
-            with open(self.path, 'wb') as file:
-                self.format_disk()
+            self.format_disk()
+        
+        if not self.diagnosis(True).primary_files:
+            self.format_disk()
+        
+        properties = self.__sys_data('Disk/$Properties')
+        self.name = properties[0]
+        self.max_size = Size(int(properties[1]))
+        self.size = Size(os.path.getsize(self.path))
 
     def __read(self, _path: str, encoding: str | None = 'UTF-8') -> str:
         """
@@ -157,23 +164,38 @@ class Disk:
             list[str]: The list of files in the disk.
         """
         with zipfile.ZipFile(self.path, 'r') as zip_buffer:
-            return zip_buffer.namelist()
+            return list(set(zip_buffer.namelist()))
     
-    def format_disk(self):
+    def format_disk(self, modelPath: str | None = None):
         """
         Formats the disk.
         """
+
         blank = io.BytesIO()
         with open(self.path, 'wb') as buffer:
             buffer.write(blank.getvalue())
         
         self.__sys_data('Disk/$Registry', _mode = 'w')
         self.__sys_data('Disk/$Properties', f'{self.name.upper()}\n{self.max_size.raw}\n{round(time.time())}\n{VERSION}', 'w')
-
+        
+        if modelPath is not None:
+            with zipfile.ZipFile(modelPath, 'r') as archive:
+                try:
+                    if '.sys/Disk/$Registry' in archive.namelist():
+                        namelist = [ { "path": item.split('::')[1], "vPath": item.split('::')[0] } for item in archive.read('.sys/Disk/$Registry').decode().split('\n') ]
+                    else:
+                        namelist = [ { "path": path, "vPath": path } for path in archive.namelist() if not path.startswith('.sys') ]
+                except IndexError:
+                    namelist = [ { "path": path, "vPath": path } for path in archive.namelist() if not path.startswith('.sys') ]
+                
+                for name in namelist:
+                    content = archive.read(name['path'])
+                    self.write(name['vPath'], content, 'w')
+        
         if not self.diagnosis(snooze = True):
             self.extract_all('./.local')
-            raise BrokenDiskError("Something went wrong while formatting your disk. It has automatically been extracted in .local")
-    
+            raise BrokenDiskError("Something went wrong while formatting your disk. It has automatically been extracted in .local")    
+
     def extract_all(self, target: str) -> None:
         """
         Extracts all files from the disk to a target directory.
@@ -184,7 +206,7 @@ class Disk:
         with zipfile.ZipFile(self.path) as zip_buffer:
             zip_buffer.extractall(target)
     
-    def f_list(self, include_ts: bool = False) -> list[str | dict]:
+    def f_list(self, include_ts: bool = False, sys = False) -> list[str | dict]:
         """
         Lists files in the disk.
 
@@ -194,13 +216,31 @@ class Disk:
         Returns:
             list[str | dict]: The list of files in the disk.
         """
-        registry = self.__sys_data('Disk/$Registry')
-        if include_ts:
-            return [ dict(zip([ 'path', 'timestamp' ], (_item.split('::')[0], _item.split('::')[2]))) for _item in registry ]
-        else:
-            return [ _item.split('::')[0] for _item in registry ]
 
-    def diagnosis(self, snooze: bool = False) -> bool:
+        registry = self.__sys_data('Disk/$Registry')
+        namelist = []
+
+        for _item in registry:
+            if _item == '':
+                continue
+
+            if include_ts:
+                namelist.append({ 'path': _item.split('::')[0], 'timestamp': _item.split('::')[2] })
+            else:
+                namelist.append(_item.split('::')[0])
+        
+        if sys:
+            print(self.__ls())
+            for name in self.__ls():
+                if name.startswith('.sys/') and not name.endswith('/'):
+                    if include_ts:
+                        namelist.append({'path': name, 'timestamp': 0 })
+                    else:
+                        namelist.append(name)
+        
+        return namelist
+
+    def diagnosis(self, snooze: bool = False) -> DiagnoseResponse:
         """
         Evaluates the health of the disk.
 
@@ -218,33 +258,39 @@ class Disk:
 
         if not zipfile.is_zipfile(self.path):
             status["DataFormat"] = "\033[31;40mIncorrect\033[0m"
-            if snooze: return False
         else:
             status["DataFormat"] = "\033[32;40mCorrect\033[0m"
-        
+
         try:
             last_v = self.__sys_data('Disk/$Properties')[3]
             if last_v.split('.')[0] < VERSION.split('.')[0] or (last_v.split('.')[0] == VERSION.split('.')[0] and last_v.split('.')[1] < VERSION.split('.')[1]):
-                if snooze: return False
                 status["DiskVersion"] = f"\033[31;40mUnsupported\033[0m ({last_v} | Required: {SUPPORTS})"
             else:
                 status["DiskVersion"] = "\033[32;40mSupported\033[0m"
         except:
             status["DiskVersion"] = "\033[31;40mUnknown\033[0m"
 
-        for _name in ['$Registry', '$Properties']:
-            if f".sys/Disk/{_name}" not in self.__ls():
-                if snooze: return False
-                status["PrimaryFiles"] = "\033[31;40mMissing\033[0m"
-                break
-        else:
-            status["PrimaryFiles"] = "\033[32;40mPresent\033[0m"
-        
+        try:
+            for _name in ['$Registry', '$Properties']:
+                if f".sys/Disk/{_name}" not in self.__ls():
+                    status["PrimaryFiles"] = "\033[31;40mMissing\033[0m"
+                    break
+            else:
+                status["PrimaryFiles"] = "\033[32;40mPresent\033[0m"
+        except:
+            status["PrimaryFiles"] = "\033[31;40mMissing\033[0m"
+
         if not snooze:
             for section, result in status.items():
-                print(section, ": ", result, sep = "")
-        
-        return True
+                print(section, ": ", result, sep="")
+
+        response = DiagnoseResponse()
+        response.disk_format = 'Incorrect' not in status['DataFormat']
+        response.is_supported = 'Un' not in status['DiskVersion']  # UN-known and UN-supported return False
+        response.primary_files = 'Present' in status['PrimaryFiles']
+
+        return response
+
 
     def write(self, vPath: str, content: str | bytes = '', mode: str = 'a') -> int:
         """

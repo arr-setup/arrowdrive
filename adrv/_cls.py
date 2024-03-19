@@ -15,6 +15,19 @@ class FileResponse:
         self.timestamp = timestamp
         self.size = len(content)
 
+class DiagnoseResponse:
+    def __init__(self):
+        self.disk_format = False
+        self.is_supported = False
+        self.primary_files = False
+    
+    def result(self) -> bool:
+        if not self.disk_format: return False
+        if not self.is_supported: return False
+        if not self.primary_files: return False
+
+        return True
+
 # Errors
 
 class FullDiskError(Exception):
