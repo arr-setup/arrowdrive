@@ -1,5 +1,4 @@
 import os
-import zipfile
 
 from . import Disk
 from ._cls import *
