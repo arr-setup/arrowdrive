@@ -44,7 +44,7 @@ class Disk:
         self.max_size = Size(int(properties[1]))
         self.size = Size(os.path.getsize(self.path))
 
-    def __read(self, _path: str, encoding: str | None = 'UTF-8') -> str:
+    def __read(self, _path: str) -> str:
         """
         Reads content from a file in the disk.
 
@@ -68,10 +68,10 @@ class Disk:
                         if os.path.isdir(tempPath):
                             raise FileIsDirectoryError(f"{vPath} is a directory.")
                         else:
-                            with open(tempPath, 'rb', encoding = None) as extracted_file:
+                            with open(tempPath, 'rb') as extracted_file:
                                 content = extracted_file.read()
                                 
-                            return content.decode(encoding)
+                            return content
                     else:
                         raise FileNotFoundError(f"{vPath} was not found.")
                     
@@ -146,11 +146,11 @@ class Disk:
         """
         _path = os.path.join('/.sys/', _name)
         if _mode == 'r':
-            return self.__read(_path, 'UTF-8').replace('\r', '').split('\n')
+            return self.__read(_path).decode('UTF-8').replace('\r', '').split('\n')
         elif _mode == 'w':
             self.__write(_data, _path)
         elif _mode == 'a':
-            data = self.__read(_path, 'UTF-8')
+            data = self.__read(_path).decode('UTF-8')
             if data != '':
                 _data = '\n'.join((data, _data))
             
@@ -206,8 +206,22 @@ class Disk:
         Args:
             target (str): The target directory.
         """
-        with zipfile.ZipFile(self.path) as zip_buffer:
-            zip_buffer.extractall(target)
+
+        registry = self.__sys_data('Disk/$Registry')
+
+        for file in self.__ls():
+            try:
+                _file = [ _item for _item in registry if _item.split('::')[1] == file ][0].split('::')
+            except IndexError:
+                continue
+
+            try:
+                os.makedirs(os.path.dirname(os.path.join(target, _file[0])))
+            except FileExistsError:
+                pass
+
+            with open(os.path.normpath(os.path.join(target, _file[0])), 'wb') as buffer:
+                buffer.write(self.__read(file))
     
     def f_list(self, include_ts: bool = False, sys = False) -> list[str | dict]:
         """
@@ -233,7 +247,6 @@ class Disk:
                 namelist.append(_item.split('::')[0])
         
         if sys:
-            print(self.__ls())
             for name in self.__ls():
                 if name.startswith('.sys/') and not name.endswith('/'):
                     if include_ts:
