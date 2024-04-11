@@ -9,8 +9,8 @@ import zipfile
 from ._cls import *
 from .utils import *
 
-VERSION = "1.2.0"
-SUPPORTS = "1.0.0"
+VERSION = "1.3.0"
+SUPPORTS = "1.3.0"
 
 class Disk:
     def __init__(self, name: str = 'vDisk', path: str = './', max_size: int = 1000 ** 2):
