@@ -23,7 +23,7 @@ class Disk:
             max_size (int, optional): The maximum size of the disk in bytes. Defaults to 1000000.
         """
         self.name = name.upper()
-        self.path = os.path.join(path, f"{name}.adrv")
+        self.path = os.path.normpath(os.path.join(path, f"{name}.adrv")).replace('\\', '/')
         self.max_size = Size(max_size)
         self.size = Size(0)
 
