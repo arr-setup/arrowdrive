@@ -6,11 +6,11 @@ import time
 import uuid
 import zipfile
 
-from ._cls import *
+from .models import *
 from .utils import *
 
-VERSION = "1.3.0"
-SUPPORTS = "1.3.0"
+VERSION = "1.4.0"
+SUPPORTS = "1.4.0"
 
 class Disk:
     def __init__(self, name: str = 'vDisk', path: str = './', max_size: int = 1000 ** 2):
@@ -22,6 +22,7 @@ class Disk:
             path (str, optional): The path where the disk will be stored. Defaults to './'.
             max_size (int, optional): The maximum size of the disk in bytes. Defaults to 1000000.
         """
+
         self.name = name.upper()
         self.path = os.path.normpath(os.path.join(path, f"{name}.adrv")).replace('\\', '/')
         self.max_size = Size(max_size)
@@ -44,7 +45,7 @@ class Disk:
         self.max_size = Size(int(properties[1]))
         self.size = Size(os.path.getsize(self.path))
 
-    def __read(self, _path: str) -> str:
+    def __read(self, _path: str) -> bytes:
         """
         Reads content from a file in the disk.
 
@@ -55,6 +56,7 @@ class Disk:
         Returns:
             str: The content of the file.
         """
+
         with open(self.path, 'rb') as _file:
             archive = io.BytesIO(_file.read())
 
@@ -71,11 +73,11 @@ class Disk:
                             with open(tempPath, 'rb') as extracted_file:
                                 content = extracted_file.read()
                                 
-                            return content
+                            return content.replace(b'\x0d', b'')
                     else:
                         raise FileNotFoundError(f"{vPath} was not found.")
                     
-    def __write(self, content: str | bytes, _path: str) -> int:
+    def __write(self, content: bytes, _path: str) -> int:
         """
         Writes content to a file in the disk.
 
@@ -86,6 +88,7 @@ class Disk:
         Returns:
             int: The size of the content written.
         """
+
         if self.size.raw + len(content) > self.max_size.raw:
             raise FullDiskError(f'Could not write anything at {_path} as its content would overload the disk. Available space: {Size(self.max_size.raw - self.size.raw).literal()} / File size: {len(content)}')
         
@@ -110,6 +113,7 @@ class Disk:
         Returns:
             int: The size of the deleted file.
         """
+
         try:
             _file = self.__read(_path)
             self.size.raw -= len(_file)
@@ -144,17 +148,18 @@ class Disk:
         Returns:
             list[str] | None: The system data.
         """
+
         _path = os.path.join('/.sys/', _name)
         if _mode == 'r':
-            return self.__read(_path).decode('UTF-8').replace('\r', '').split('\n')
+            return self.__read(_path).decode('UTF-8').split('\n')
         elif _mode == 'w':
-            self.__write(_data, _path)
+            self.__write(_data.encode(), _path)
         elif _mode == 'a':
             data = self.__read(_path).decode('UTF-8')
             if data != '':
-                _data = '\n'.join((data, _data))
+                _data = '\n'.encode().join((data.encode(), _data.encode()))
             
-            self.__write(_data, _path)
+            self.__write(_data.encode(), _path)
 
     def __ls(self) -> list[str]:
         """
@@ -163,6 +168,7 @@ class Disk:
         Returns:
             list[str]: The list of files in the disk.
         """
+
         with zipfile.ZipFile(self.path, 'r') as zip_buffer:
             return list(set(zip_buffer.namelist()))
     
@@ -264,7 +270,7 @@ class Disk:
             snooze (bool, optional): Whether to suppress output. Defaults to False.
 
         Returns:
-            bool: True if the disk is healthy, False otherwise.
+            DiagnoseResponse
         """
 
         if not snooze:
@@ -298,7 +304,7 @@ class Disk:
 
         if not snooze:
             for section, result in status.items():
-                print(section, ": ", result, sep="")
+                print(section, ": ", result, sep = "")
 
         response = DiagnoseResponse()
         response.disk_format = 'Incorrect' not in status['DataFormat']
@@ -308,7 +314,7 @@ class Disk:
         return response
 
 
-    def write(self, vPath: str, content: str | bytes = '', mode: str = 'a') -> int:
+    def write(self, vPath: str, content: str | bytes = b'', mode: str = 'a') -> int:
         """
         Writes content to a file in the disk.
 
@@ -320,6 +326,10 @@ class Disk:
         Returns:
             int: The size of the content written.
         """
+
+        if type(content) == str:
+            content = content.encode()
+
         if mode == 'w':
             _file = { 'path': vPath, 'address': str(uuid.uuid4()), 'timestamp': round(time.time()) }
             self.__delete(_file['address'])
@@ -335,8 +345,8 @@ class Disk:
 
             _file = dict(zip([ 'path', 'address', 'timestamp' ], _file))
 
-            data = self.__read(_file['address'])
-            _data = '\n'.join((str(data), str(content)))
+            data = self.__read(_file['address']).decode()
+            _data = '\n'.encode().join((data.encode(), content))
 
             self.__delete(_file['address'])
             self.__write(_data, _file['address'])
@@ -353,6 +363,7 @@ class Disk:
         Returns:
             FileResponse: The response containing the file data.
         """
+
         registry = reversed(self.__sys_data('Disk/$Registry'))
         try:
             _file = [ _item for _item in registry if _item.split('::')[0] == vPath ][0].split('::')
