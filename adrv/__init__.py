@@ -230,7 +230,7 @@ class Disk:
             with open(os.path.normpath(os.path.join(target, _file[0])), 'wb') as buffer:
                 buffer.write(self.__read(file))
     
-    def f_list(self, include_ts: bool = False, sys = False) -> list[str | dict]:
+    def f_list(self, include_ts: bool = False, sys: bool = False) -> list[str | dict]:
         """
         Lists files in the disk.
 
