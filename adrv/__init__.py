@@ -202,7 +202,7 @@ class Disk:
             else:
                 raise BrokenDiskError(f"{modelPath} is broken.")
         
-        if not self.diagnosis(snooze = True):
+        if not self.diagnosis(snooze = True).result():
             self.extract_all('./.local')
             raise BrokenDiskError("Something went wrong while formatting your disk. It has automatically been extracted in .local")    
 
