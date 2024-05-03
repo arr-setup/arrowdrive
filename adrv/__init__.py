@@ -160,7 +160,7 @@ class Disk:
             if data != '':
                 _data = '\n'.encode().join((data.encode(), _data.encode()))
             
-            self.__write(_data.encode(), _path)
+            self.__write(_data, _path)
 
     def __ls(self) -> list[str]:
         """
