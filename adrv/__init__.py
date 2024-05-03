@@ -6,6 +6,7 @@ import time
 import uuid
 import zipfile
 
+from .exceptions import *
 from .models import *
 from .utils import *
 

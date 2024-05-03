@@ -1,7 +1,7 @@
 import os
 
 from . import Disk
-from ._cls import *
+from .models import *
 
 class PhysicalBridge:
     def __init__(self, disk: Disk):
