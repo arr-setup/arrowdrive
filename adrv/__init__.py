@@ -10,7 +10,7 @@ from .exceptions import *
 from .models import *
 from .utils import *
 
-VERSION = "1.4.0"
+VERSION = "1.4.1"
 SUPPORTS = "1.4.0"
 
 class Disk:
