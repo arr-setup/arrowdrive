@@ -7,7 +7,10 @@ def parse(data: str, keys: list, mode: int = 1) -> list | dict | list[dict]:
     elif mode == 2:
         return dict([ item.split('=', 1) for item in data.split('\n') ])
     elif mode == 3:
-        return [ dict(zip(keys, item.split('::'))) for item in data.split('\n') ]
+        if len(keys) == 0:
+            return [ item.split('::') for item in data.split('\n') ]
+        else:
+            return [ dict(zip(keys, item.split('::'))) for item in data.split('\n') ]
     elif mode == 4:
         return data.split('\n')
     else:
