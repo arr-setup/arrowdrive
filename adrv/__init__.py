@@ -8,7 +8,7 @@ import zipfile
 
 from .exceptions import *
 from .models import *
-from .utils import *
+from .utils.units import *
 
 VERSION = "1.4.2"
 SUPPORTS = "1.4.0"
