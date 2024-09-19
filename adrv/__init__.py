@@ -205,8 +205,6 @@ class Disk:
             if _dir['path'] == path:
                 return _dir['target']
 
-        raise ValueError('Pas bon')
-
     def __ls(self) -> list[str]:
         """
         Lists files in the disk.
@@ -399,7 +397,6 @@ class Disk:
 
         if mode == 'w':
             dir_id = self.__add_dir(os.path.dirname(vPath))
-            # print(self.__get_dirs(False))
 
             _file = { 'path': vPath, 'address': str(uuid.uuid4()), 'timestamp': round(time.time()), 'dir': dir_id }
             self.__delete(_file['address'])
