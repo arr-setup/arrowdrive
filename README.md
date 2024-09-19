@@ -1,173 +1,223 @@
-# ArrowDrive
-Special reader for ArrowBit virtual disks.
-vDisk extension: `.adrv`
+# ArrowDrive (adrv)
 
-# How to use it
+ArrowDrive is a Python module that allows you to create and manage virtual disks. The module ensures that the virtual disk's size does not exceed a specified maximum limit.
 
-## 1- Create a Disk object
-```py
-from adrv import Disk
+## Version
 
-myDisk = Disk('myDisk', './vDisks', 4 * 1000 ** 3) # Create a 4GB disk.
+- Current version: 1.4.2
+- Last supported version: 1.4.0
+
+## Installation
+
+ArrowDrive is available on PyPI. You can install it using pip:
+
+```bash
+pip install adrv
 ```
 
-**Parameters:**
-> `name: str` - The name of the vDisk<br>
-> `path: str` - The directory where the vDisk will be created<br>
-> `size: int` - the size of the vDisk, in bytes<br>
+Alternatively, you can clone the repository:
 
-You just created a new Disk object that points to the given path. If the disk doesn't exist, it will be created with the necessary directories.<br>
-**Important:** The 4GB limit set up isn't pre-allocated and it's only a virtual limit. It can easily be edited with the class attributes (it should be fixed soon)
-
-## 2- Create a file...
-
-### With the PhysicalBridge
-
-The PhysicalBridge is a bridge between your computer's file system and the virtual disk. With it, you can copy a file from your working directory or another on your computer and your removable storage and vice-versa.
-
-```py
-from adrv import Disk
-from adrv.bridge import PhysicalBridge
-
-myDisk = Disk('myDisk', './vDisks', 4 * 1000 ** 3) # Create a 4GB disk.
-bridge = PhysicalBridge(myDisk)
-
-bridge.send('./images/drawing.png', '/drawings')
+```bash
+git clone https://github.com/arr-setup/arrowdrive.git
 ```
 
-**PhysicalBridge.send() - Parameters:**
-> `filePath: str` - The file absolute or relative path on your computer<br>
-> `virtualPath: str` - The destination of your file in the virtual disk<br>
-> `newName: str` *(optional)* - The new name of the file, default is the last element of the `filePath` value.<br>
+## Usage
 
-### With the VirtualBridge
-You can use the VirtualBridge to transfer a file between two disks with only one method.
+### Initialization
 
-```py
-from adrv import Disk
-from adrv.bridge import VirtualBridge
+Create a new instance of the `Disk` class:
 
-myDisk = Disk('myDisk', './vDisks', 4 * 1000 ** 3) # Create a 4GB disk.
-yourDisk = Disk('yourDisk', './vDisks', 4 * 1000 ** 3) # Create another 4GB disk.
-vBridge = VirtualBridge(myDisk, yourDisk)
+```python
+import adrv
 
-vBridge.cross('/images/drawing.png', '/drawings', rtl = False) # Copy drawing.png on the first disk to the /drawings directory of the second disk
+disk = adrv.Disk(name='myDisk', path='./disks', max_size=1000 ** 2)
 ```
 
-**VirtualBridge() - Parameters:**
-> `left: Disk` - The default sender Disk<br>
-> `right: Disk` - The default receiver Disk<br>
+### `adrv.Disk(name: str = 'vDisk', path: str = './', max_size: int = 1000 ** 2)`
 
-**VirtualBridge.cross() - Parameters:**
-> `targetPath: str` - The targeted file path on the **sender**<br>
-> `finalPath: str` - The destination path of the file in the **receiver**<br>
-> `rtl: bool` _(optional)_ - Choose whether the sender/receiver roles are reversed or not. Default option is False<br>
+Initializes a Disk instance.
 
-### Manually
-```py
-from adrv import Disk
+- **name**: The name of the disk. Defaults to 'vDisk'.
+- **path**: The path where the disk will be stored. Defaults to './'.
+- **max_size**: The maximum size of the disk in bytes. Defaults to 1,000,000 bytes.
+  
+### Methods
 
-myDisk = Disk('myDisk', './vDisks', 4 * 1000 ** 3) # Create a 4GB disk.
-myDisk.write('/hello/world.txt', 'Hello World', 'w') # You can use it in a variable to see how many bytes have been written
+### `read(vPath: str) -> FileResponse`
+
+Reads a file from the disk.
+
+- **vPath**: The path of the file to be read.
+
+### `write(vPath: str, content: str | bytes = b'', mode: str = 'a') -> int`
+
+Writes content to a file in the disk.
+
+- **vPath**: The path where the content will be written.
+- **content**: The content to be written. Defaults to an empty byte string.
+- **mode**: The writing mode ('a' for append, 'w' for write). Defaults to 'a'.
+
+### `delete(vPath: str) -> int`
+
+Deletes a file from the disk.
+
+- **vPath**: The path of the file to be deleted.
+
+### `format_disk(modelPath: str | None = None)`
+
+Formats the disk. Optionally, a model path can be provided to initialize the disk with predefined files.
+
+- **modelPath**: The path to a model zip file. None (default) means the Disk will be completely reset.
+
+### `extract_all(target: str)`
+
+Extracts all files from the disk to a target directory.
+
+- **target**: The target directory.
+
+### `f_list(include_ts: bool = False, sys: bool = False) -> list[str | dict]`
+
+Lists files in the disk.
+
+- **include_ts**: Whether to include timestamps (and additional info in future versions). Defaults to False.
+- **sys** (deprecated): Whether to include system files. Defaults to False.
+
+### `diagnosis(snooze: bool = False) -> DiagnoseResponse`
+
+Evaluates the health of the disk.
+
+- **snooze**: Whether to suppress output. Defaults to False.
+
+## Example
+
+```python
+import adrv
+
+# Create a new disk
+disk = adrv.Disk(name='myDisk', path='./storage', max_size=1000**2)
+
+# Write a file
+disk.write('hello.txt', 'Hello, world!', mode='w')
+
+# Read a file
+file = disk.read('hello.txt')
+print(file.content.decode())
+
+# List files
+files = disk.f_list()
+print(files)
+
+# Delete a file
+disk.delete('hello.txt')
 ```
 
-**Disk.write() - Parameters:**
-> `vPath: str` - The file destination on your virtual disk<br>
-> `content: str | bytes` - The file content<br>
-> `mode: str` _'a' or 'w'_ - Defines whether the file should be overwritten or not<br>
+## Error Handling
 
-## 3- Read a file
+The module raises specific exceptions for different error conditions:
 
-The only way to read a file is the Disk.read() method:
-```py
-from adrv import Disk
+- `FileIsDirectoryError`: Raised when attempting to read a directory as a file.
+- `FileNotFoundError`: Raised when a file is not found.
+- `FullDiskError`: Raised when attempting to write content that exceeds the disk's maximum size.
+- `BrokenDiskError`: Raised when the disk is detected to be in a corrupted state.
 
-myDisk = Disk('myDisk', './vDisks', 4 * 1000 ** 3) # Create a 4GB disk.
-content = myDisk.read('/hello/world.txt')
-```
+## Utils
 
-The `file` variable contains a `FileResponse` with 4 attributes:
-> `content: str | bytes` - The file content as you wrote it
-> `name: str` - The name of the file
-> `timestamp: int` - The **virtual file** creation time
-> `size: int` - The size of the file
+### `utils.parser`
 
-**Disk.read() - Parameters:**
-> `vpath: str` - Path of the file to read
+#### `parse(data: str, keys: list, mode: int = 1) -> list | dict | list[dict]`
 
-## 4- Delete a file
+Parses the provided data string into different formats based on the mode.
 
-```py
-from adrv import Disk
+- **data**: The data string to parse.
+- **keys**: A list of keys to use in the parsing.
+- **mode**: Determines the parsing strategy.
+  - `1`: Splits data by new lines and zips with keys.
+  - `2`: Splits data by new lines and then by '=' for key-value pairs.
+  - `3`: Splits data by '::' and optionally zips with keys.
+  - `4`: Splits data by new lines.
 
-myDisk = Disk('myDisk', './vDisks', 4 * 1000 ** 3) # Create a 4GB disk.
-myDisk.delete('/hello/world.txt') # Similary to write(), you can get the amount of bytes removed from the disk
-```
+Returns a list, dictionary, or list of dictionaries based on the mode.
 
-**Disk.delete() - Parameters:**
-> `vpath: str` - Path of the file to deleted
+#### `unparse(data, mode: int = 1) -> str`
 
-## 5- Formatting and file system informations
-Formatting a Disk is sometimes useful when you have a totally useless file that you want to recycle, or if your disk is broken.
+Unparses data into a string based on the mode.
 
-### Basic formatting
-The basic formatting overwrites a new, completely blank disk on the old one.<br>
-**Be careful before using it: The whole content of your virtual disk will be wipped out, the system files as well (will be rewritten)**
+- **data**: The data to unparse.
+- **mode**: Determines the unparse strategy.
+  - `1`: Joins values with new lines.
+  - `2`: Joins key-value pairs with '=' and new lines.
+  - `3`: Joins dictionary values with '::'.
+  - `4`: Joins list items with new lines.
 
-```py
-myDisk = Disk('myDisk', './vDisks', 4 * 1000 ** 3) # Create a 4GB disk.
-myDisk.format_disc()
-```
+Returns the unparsed string.
 
-### Soft formatting
-_Available in 1.1_
+### `utils.units`
 
-### What type of formatting to use
+#### `Size`
 
-|                       	        | Basic formatting   	| Soft formatting    	|
-|----------------------------------	|----------------------	|---------------------- |
-| Data preservation     	        | ❌ | ✅ |
-| Guarenteed efficiency*           	| ✅ | ❌ |
-| Generates a new disk if missing   | ❌ | ✅ |
-| Convert to another fs (i.g. NTFS) | ❌ | ❌ |
-| Copy sys files from another vDisk | ❌ | 🕗 _1.1_ |
+A class to handle size representation and conversion.
 
-_* A guaranteed efficiency means the disk doesn't have any chance to be broken after being formatted._ <br>
+- **__init__(value: int | float)**
+  - **value**: The size value in bytes.
 
-According to the table above, the two types of formatting have their own advantages. The basic formatting is recommended in the case you would like to wipe all the content of your disk to make a better one. The soft formatting can be used to create a new disk from a simple ZIP archive.
+- **literal() -> str**
+  - Converts the raw size value to a human-readable format (e.g., 1kB, 1MB).
 
-### Disk status
+#### Units
 
-You can check the status of the disk with a built-in method, and choose whether you want to use it in your code or visually (i.g. for testing)
+- `units`: 1 byte.
+- `kilo`: 1 kilobyte (1,000 bytes).
+- `mega`: 1 megabyte (1,000,000 bytes).
+- `giga`: 1 gigabyte (1,000,000,000 bytes).
+- `tera`: 1 terabyte (1,000,000,000,000 bytes).
 
-```py
-from adrv import Disk, convert
+#### `convert(val: float, _from: str, _to: str) -> float`
 
-disk = Disk('myDisk', './disks', convert(4, 'GB'))
-disk.format_disk()
-disk.diagnosis() # Prints the result (it should be good)
+Converts a value from one unit to another.
 
-if not disk.diagnosis(snooze = True).result(): # Snooze prevents the method from printing
-    print("Your disk is broken")
+- **val**: The value to convert.
+- **_from**: The original unit (B, kB, MB, GB, TB).
+- **_to**: The target unit (B, kB, MB, GB, TB).
 
-with open(disk.path, 'w') as file:
-    file.write('abc')
+Returns the converted value.
 
-disk.diagnosis() # Prints the result again (it should be bad)
-```
+### `bridge`
 
-**Response:**
-This method returns a `DiagnoseResponse` with the three following items:<br>
-- `disk_format` - Returns whether the file targeted by the Disk is correct or not (it should always be True except if the first formatting failed)
-- `is_supported` - Returns whether the disk is supported by your version of ADRV
-- `primary_files` - Returns if the necessary system files are in your disk or not (often related with `is_supported`)
-- `result()` - Returns True if all of the above items are True
+#### `PhysicalBridge`
 
-**Note: After a formatting, you have no need to diagnose the disk (it is done automatically)**
+A class to handle physical file transfer to and from the virtual disk.
 
-### Other methods
+- **__init__(disk: Disk)**
+  - **disk**: The Disk instance to interact with.
 
-**extract_all(target: str):**<br>
-Extracts the archive in the given directory (`target`)<br><br>
-**f_list(include_ts: bool = False):**<br>
-List all the files (`list[str]`) and include their timestamp (`list[dict]`) if `include_ts` is `True`.
+- **bring(vPath: str, newPath: str)**
+  - Transfers a file from the virtual disk to a physical location.
+  - **vPath**: The virtual path of the file.
+  - **newPath**: The physical path where the file will be saved.
+
+- **send(filePath: str, vPath: str)**
+  - Transfers a file from a physical location to the virtual disk.
+  - **filePath**: The physical path of the file.
+  - **vPath**: The virtual path where the file will be saved.
+
+#### `VirtualBridge`
+
+A class to handle file transfer between two virtual disks.
+
+- **__init__(firstDisk: Disk, secondDisk: Disk)**
+  - **firstDisk**: The source Disk instance.
+  - **secondDisk**: The destination Disk instance.
+
+- **cross(targetPath: str, finalPath: str = '/shore', rtl: bool = False)**
+  - Transfers a file from one virtual disk to another.
+  - **targetPath**: The path of the file on the source disk.
+  - **finalPath**: The path where the file will be saved on the destination disk.
+  - **rtl**: If `True`, transfers from the second disk to the first; otherwise, transfers from the first to the second.
+
+## Contributing
+
+Contributions are welcome! Please submit a pull request or open an issue to discuss any changes.
+
+## License
+
+This project is licensed under the GPLv3 License.
